@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TANESCO Pole Monitor — Admin Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #080c10;
+      --panel:     #0d1318;
+      --border:    #1e2d3a;
+      --border2:   #2a3f52;
+      --amber:     #f59e0b;
+      --amber-dim: #92600a;
+      --teal:      #0ea5e9;
+      --teal-dim:  #0c4a6e;
+      --red:       #ef4444;
+      --text:      #c8d8e8;
+      --muted:     #4a6070;
+      --mono:      'Share Tech Mono', monospace;
+      --body:      'Barlow', sans-serif;
+      --display:   'Barlow Condensed', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--body);
+      overflow: hidden;
+    }
+
+    /* ── Grid background ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        linear-gradient(rgba(14,165,233,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(14,165,233,.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    /* ── Scanning line animation ── */
+    body::after {
+      content: '';
+      position: fixed;
+      left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(14,165,233,.25), transparent);
+      animation: scan 6s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes scan {
+      0%   { top: -2px; opacity: 0; }
+      5%   { opacity: 1; }
+      95%  { opacity: 1; }
+      100% { top: 100vh; opacity: 0; }
+    }
+
+    /* ── Layout ── */
+    .layout {
+      height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 480px 1fr;
+      grid-template-rows: 1fr;
+      align-items: center;
+    }
+
+    /* ── Left panel — system status ── */
+    .side-left {
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      opacity: 0;
+      animation: fadeSlide .6s .3s ease forwards;
+    }
+
+    .sys-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      margin-bottom: .5rem;
+    }
+
+    .sys-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .sys-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .sys-dot.ok      { background: #22c55e; box-shadow: 0 0 6px #22c55e; }
+    .sys-dot.warn    { background: var(--amber); box-shadow: 0 0 6px var(--amber); animation: blink 1.4s infinite; }
+    .sys-dot.offline { background: var(--red); }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    .sys-row-label { font-family: var(--mono); font-size: 12px; color: var(--text); flex: 1; }
+    .sys-row-val   { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+    .stat-block {
+      border: 1px solid var(--border);
+      padding: 14px 16px;
+      background: rgba(14,165,233,.03);
+    }
+    .stat-block-label { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: .12em; }
+    .stat-block-val   { font-family: var(--display); font-size: 38px; font-weight: 800; color: var(--teal); line-height: 1; margin-top: 2px; }
+    .stat-block-sub   { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    /* ── Right panel — map placeholder ── */
+    .side-right {
+      padding: 2rem;
+      opacity: 0;
+      animation: fadeSlide .6s .5s ease forwards;
+    }
+
+    .map-frame {
+      border: 1px solid var(--border);
+      padding: 14px;
+      background: rgba(14,165,233,.02);
+    }
+    .map-title { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: .12em; margin-bottom: 12px; }
+    .map-svg-wrap { position: relative; }
+    .map-ping {
+      position: absolute;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--amber);
+      box-shadow: 0 0 0 0 rgba(245,158,11,.4);
+      animation: ping 2s infinite;
+    }
+    .map-ping.ok  { background: #22c55e; box-shadow: 0 0 0 0 rgba(34,197,94,.4); }
+    @keyframes ping {
+      0%   { box-shadow: 0 0 0 0 currentcolor; }
+      70%  { box-shadow: 0 0 0 8px transparent; }
+      100% { box-shadow: 0 0 0 0 transparent; }
+    }
+
+    /* ── Center — login panel ── */
+    .login-wrap {
+      position: relative;
+      opacity: 0;
+      animation: fadeSlide .6s .1s ease forwards;
+    }
+    @keyframes fadeSlide {
+      from { opacity:0; transform: translateY(12px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+
+    /* Corner decorations */
+    .login-wrap::before, .login-wrap::after,
+    .corner-br, .corner-bl {
+      content: '';
+      position: absolute;
+      width: 18px; height: 18px;
+    }
+    .login-wrap::before { top: 0; left: 0; border-top: 2px solid var(--teal); border-left: 2px solid var(--teal); }
+    .login-wrap::after  { top: 0; right: 0; border-top: 2px solid var(--teal); border-right: 2px solid var(--teal); }
+    .corner-br { bottom: 0; right: 0; border-bottom: 2px solid var(--teal); border-right: 2px solid var(--teal); }
+    .corner-bl { bottom: 0; left: 0; border-bottom: 2px solid var(--teal); border-left: 2px solid var(--teal); }
+
+    .login-panel {
+      background: var(--panel);
+      border: 1px solid var(--border2);
+      padding: 40px 44px 44px;
+      margin: 6px;
+    }
+
+    /* Logo area */
+    .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+    .logo-icon {
+      width: 46px; height: 46px;
+      border: 2px solid var(--amber);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .logo-icon::after {
+      content: '';
+      position: absolute;
+      inset: 3px;
+      border: 1px solid rgba(245,158,11,.3);
+    }
+    .logo-text-main {
+      font-family: var(--display);
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: .05em;
+      color: #fff;
+      line-height: 1;
+    }
+    .logo-text-sub {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      margin-top: 3px;
+    }
+
+    /* Divider */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .divider-line { flex: 1; height: 1px; background: var(--border2); }
+    .divider-text { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: .15em; }
+
+    /* Form */
+    .field { margin-bottom: 20px; }
+    .field-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .15em;
+      color: var(--muted);
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .field-label-dot {
+      width: 4px; height: 4px;
+      background: var(--teal);
+      border-radius: 50%;
+    }
+
+    .field-wrap {
+      position: relative;
+    }
+    .field-wrap input {
+      width: 100%;
+      background: rgba(14,165,233,.04);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 14px;
+      padding: 11px 40px 11px 14px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s, background .2s;
+      letter-spacing: .05em;
+    }
+    .field-wrap input:focus {
+      border-color: var(--teal);
+      background: rgba(14,165,233,.08);
+      box-shadow: 0 0 0 3px rgba(14,165,233,.1);
+    }
+    .field-wrap input::placeholder { color: var(--muted); font-size: 13px; }
+    .field-wrap input.error { border-color: var(--red); }
+
+    .field-icon {
+      position: absolute;
+      right: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      font-size: 14px;
+      cursor: pointer;
+      user-select: none;
+      transition: color .15s;
+    }
+    .field-icon:hover { color: var(--teal); }
+
+    /* Error msg */
+    .error-msg {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--red);
+      margin-top: 6px;
+      display: none;
+      align-items: center;
+      gap: 6px;
+    }
+    .error-msg.show { display: flex; }
+
+    /* Remember row */
+    .remember-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .checkbox-wrap {
+      display: flex; align-items: center; gap: 8px;
+      cursor: pointer;
+    }
+    .checkbox-wrap input { display: none; }
+    .checkbox-custom {
+      width: 14px; height: 14px;
+      border: 1px solid var(--border2);
+      background: transparent;
+      display: flex; align-items: center; justify-content: center;
+      transition: .15s;
+      flex-shrink: 0;
+    }
+    .checkbox-wrap input:checked + .checkbox-custom {
+      background: var(--teal);
+      border-color: var(--teal);
+    }
+    .checkbox-wrap input:checked + .checkbox-custom::after {
+      content: '✓';
+      font-size: 9px;
+      color: #000;
+      font-weight: bold;
+    }
+    .checkbox-label { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .05em; }
+    .forgot { font-family: var(--mono); font-size: 11px; color: var(--teal); text-decoration: none; letter-spacing: .05em; transition: color .15s; }
+    .forgot:hover { color: #fff; }
+
+    /* Submit button */
+    .btn-submit {
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--teal);
+      color: var(--teal);
+      font-family: var(--display);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      padding: 13px;
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: color .2s;
+    }
+    .btn-submit::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--teal);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform .25s ease;
+    }
+    .btn-submit:hover::before { transform: scaleX(1); }
+    .btn-submit:hover { color: #000; }
+    .btn-submit span { position: relative; z-index: 1; }
+    .btn-submit:active { transform: scale(.99); }
+
+    /* Loading state */
+    .btn-submit.loading {
+      pointer-events: none;
+      color: var(--muted);
+      border-color: var(--muted);
+    }
+    .btn-submit.loading::before { transform: scaleX(0) !important; }
+    .btn-submit.loading span::after {
+      content: '';
+      display: inline-block;
+      width: 10px; height: 10px;
+      border: 2px solid var(--muted);
+      border-top-color: var(--teal);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      margin-left: 10px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Footer */
+    .login-footer {
+      margin-top: 28px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-code {
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: .12em;
+    }
+    .secure-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--mono);
+      font-size: 9px;
+      color: #22c55e;
+      letter-spacing: .1em;
+    }
+    .secure-dot { width: 5px; height: 5px; background: #22c55e; border-radius: 50%; animation: blink 2s infinite; }
+
+    /* Top ticker */
+    .ticker {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 28px;
+      background: rgba(14,165,233,.06);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      overflow: hidden;
+    }
+    .ticker-inner {
+      display: flex;
+      gap: 48px;
+      white-space: nowrap;
+      animation: ticker 30s linear infinite;
+    }
+    @keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    .ticker-item {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: .1em;
+      display: flex; gap: 8px;
+    }
+    .ticker-item .val { color: var(--teal); }
+    .ticker-item .alert-val { color: var(--amber); }
+
+    @media (max-width: 900px) {
+      .side-left, .side-right { display: none; }
+      .layout { grid-template-columns: 1fr; justify-items: center; padding: 1rem; }
+      .login-wrap { width: 100%; max-width: 420px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Top ticker -->
+<div class="ticker">
+  <div class="ticker-inner">
+    <span class="ticker-item">POLE_A <span class="val">3.2°</span></span>
+    <span class="ticker-item">POLE_B <span class="alert-val">14.5° ⚠</span></span>
+    <span class="ticker-item">POLE_C <span class="val">1.8°</span></span>
+    <span class="ticker-item">POLE_D <span class="val">0.4°</span></span>
+    <span class="ticker-item">SYSTEM <span class="val">ONLINE</span></span>
+    <span class="ticker-item">DB <span class="val">CONNECTED</span></span>
+    <span class="ticker-item">NODES_ACTIVE <span class="val">12/15</span></span>
+    <span class="ticker-item">ALERTS_OPEN <span class="alert-val">3</span></span>
+    <!-- Duplicate for seamless loop -->
+    <span class="ticker-item">POLE_A <span class="val">3.2°</span></span>
+    <span class="ticker-item">POLE_B <span class="alert-val">14.5° ⚠</span></span>
+    <span class="ticker-item">POLE_C <span class="val">1.8°</span></span>
+    <span class="ticker-item">POLE_D <span class="val">0.4°</span></span>
+    <span class="ticker-item">SYSTEM <span class="val">ONLINE</span></span>
+    <span class="ticker-item">DB <span class="val">CONNECTED</span></span>
+    <span class="ticker-item">NODES_ACTIVE <span class="val">12/15</span></span>
+    <span class="ticker-item">ALERTS_OPEN <span class="alert-val">3</span></span>
+  </div>
+</div>
+
+<div class="layout" style="padding-top: 28px;">
+
+  <!-- Left: system status -->
+  <div class="side-left">
+    <div>
+      <div class="sys-title">// system status</div>
+      <div class="sys-row">
+        <div class="sys-dot ok"></div>
+        <span class="sys-row-label">API Server</span>
+        <span class="sys-row-val">ONLINE</span>
+      </div>
+      <div class="sys-row">
+        <div class="sys-dot ok"></div>
+        <span class="sys-row-label">PostgreSQL DB</span>
+        <span class="sys-row-val">CONNECTED</span>
+      </div>
+      <div class="sys-row">
+        <div class="sys-dot warn"></div>
+        <span class="sys-row-label">LoRa Gateway</span>
+        <span class="sys-row-val">DEGRADED</span>
+      </div>
+      <div class="sys-row">
+        <div class="sys-dot ok"></div>
+        <span class="sys-row-label">Alert Service</span>
+        <span class="sys-row-val">ACTIVE</span>
+      </div>
+      <div class="sys-row" style="border:none">
+        <div class="sys-dot offline"></div>
+        <span class="sys-row-label">Pole Node E</span>
+        <span class="sys-row-val">OFFLINE</span>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+      <div class="stat-block">
+        <div class="stat-block-label">Active nodes</div>
+        <div class="stat-block-val">12</div>
+        <div class="stat-block-sub">of 15 total</div>
+      </div>
+      <div class="stat-block">
+        <div class="stat-block-label">Open alerts</div>
+        <div class="stat-block-val" style="color:var(--amber)">3</div>
+        <div class="stat-block-sub">2 warnings, 1 critical</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sys-title">// last event log</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--muted);line-height:2;">
+        <div><span style="color:var(--amber)">14:32:01</span> POLE_B tilt 14.5° WARNING</div>
+        <div><span style="color:var(--teal)">14:28:44</span> POLE_A heartbeat OK</div>
+        <div><span style="color:var(--red)">14:15:20</span> POLE_E connection lost</div>
+        <div><span style="color:var(--teal)">14:10:05</span> DB backup completed</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Center: login -->
+  <div class="login-wrap">
+    <div class="corner-br"></div>
+    <div class="corner-bl"></div>
+    <div class="login-panel">
+
+      <div class="logo-row">
+        <div class="logo-icon">⚡</div>
+        <div>
+          <div class="logo-text-main">TANESCO</div>
+          <div class="logo-text-sub">Pole Monitor — Admin Portal</div>
+        </div>
+      </div>
+
+      <div class="divider">
+        <div class="divider-line"></div>
+        <div class="divider-text">SECURE_ACCESS</div>
+        <div class="divider-line"></div>
+      </div>
+
+      <form id="login-form" novalidate>
+
+        <div class="field">
+          <div class="field-label">
+            <div class="field-label-dot"></div>
+            Admin Username
+          </div>
+          <div class="field-wrap">
+            <input type="text" id="username" name="username"
+                   placeholder="Enter your username" autocomplete="username"/>
+            <span class="field-icon">⌂</span>
+          </div>
+          <div class="error-msg" id="username-err">⚠ Username is required</div>
+        </div>
+
+        <div class="field">
+          <div class="field-label">
+            <div class="field-label-dot"></div>
+            Password
+          </div>
+          <div class="field-wrap">
+            <input type="password" id="password" name="password"
+                   placeholder="Enter your password" autocomplete="current-password"/>
+            <span class="field-icon" id="pw-toggle" title="Show/hide password">◉</span>
+          </div>
+          <div class="error-msg" id="password-err">⚠ Password is required</div>
+        </div>
+
+        <div class="remember-row">
+          <label class="checkbox-wrap">
+            <input type="checkbox" id="remember"/>
+            <div class="checkbox-custom"></div>
+            <span class="checkbox-label">KEEP_SESSION_ACTIVE</span>
+          </label>
+          <a href="/forgot-password" class="forgot">RESET_ACCESS →</a>
+        </div>
+
+        <div class="error-msg" id="form-err" style="margin-bottom:16px; font-size:12px;">
+          ⚠ <span id="form-err-text">Invalid credentials. Access denied.</span>
+        </div>
+
+        <button type="submit" class="btn-submit" id="btn-submit">
+          <span id="btn-text">AUTHENTICATE</span>
+        </button>
+
+      </form>
+
+      <div class="login-footer">
+        <div class="footer-code">SYS_VER: 1.0.0 · TZ-DAR-001</div>
+        <div class="secure-badge">
+          <div class="secure-dot"></div>
+          TLS_ENCRYPTED
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Right: mini network map -->
+  <div class="side-right">
+    <div class="map-frame">
+      <div class="map-title">// network topology — dar es salaam grid</div>
+      <div class="map-svg-wrap">
+        <svg viewBox="0 0 300 260" width="100%" style="display:block;">
+          <!-- Grid lines -->
+          <defs>
+            <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+              <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(14,165,233,.07)" stroke-width="0.5"/>
+            </pattern>
+          </defs>
+          <rect width="300" height="260" fill="url(#grid)"/>
+
+          <!-- Connection lines -->
+          <g stroke="rgba(14,165,233,.2)" stroke-width="1" stroke-dasharray="4 4">
+            <line x1="150" y1="110" x2="60"  y2="60"/>
+            <line x1="150" y1="110" x2="240" y2="70"/>
+            <line x1="150" y1="110" x2="80"  y2="180"/>
+            <line x1="150" y1="110" x2="220" y2="190"/>
+            <line x1="150" y1="110" x2="150" y2="210"/>
+          </g>
+          <!-- Amber warning line -->
+          <line x1="150" y1="110" x2="240" y2="70"
+                stroke="rgba(245,158,11,.5)" stroke-width="1.2" stroke-dasharray="4 4"/>
+
+          <!-- Gateway (center) -->
+          <rect x="132" y="92" width="36" height="36" fill="rgba(14,165,233,.12)" stroke="rgba(14,165,233,.6)" stroke-width="1.5"/>
+          <text x="150" y="114" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="8" fill="rgba(14,165,233,.9)">GW</text>
+
+          <!-- Pole nodes -->
+          <circle cx="60"  cy="60"  r="7" fill="rgba(34,197,94,.15)" stroke="#22c55e" stroke-width="1.2"/>
+          <text x="60"  y="49" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="#4a6070">A</text>
+
+          <circle cx="240" cy="70"  r="7" fill="rgba(245,158,11,.15)" stroke="rgba(245,158,11,.8)" stroke-width="1.2"/>
+          <text x="240" y="59" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="#4a6070">B</text>
+
+          <circle cx="80"  cy="180" r="7" fill="rgba(34,197,94,.15)" stroke="#22c55e" stroke-width="1.2"/>
+          <text x="80"  y="198" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="#4a6070">C</text>
+
+          <circle cx="220" cy="190" r="7" fill="rgba(34,197,94,.15)" stroke="#22c55e" stroke-width="1.2"/>
+          <text x="220" y="208" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="#4a6070">D</text>
+
+          <!-- Offline node -->
+          <circle cx="150" cy="210" r="7" fill="rgba(239,68,68,.08)" stroke="rgba(239,68,68,.4)" stroke-width="1.2" stroke-dasharray="3 2"/>
+          <text x="150" y="228" text-anchor="middle" font-family="'Share Tech Mono',monospace" font-size="7" fill="#4a6070">E</text>
+        </svg>
+
+        <!-- Pings (absolute positioned over SVG) -->
+        <div class="map-ping ok"  style="top:38px;  left:37px;"></div>
+        <div class="map-ping"     style="top:47px;  left:215px;"></div>
+        <div class="map-ping ok"  style="top:157px; left:57px;"></div>
+        <div class="map-ping ok"  style="top:167px; left:197px;"></div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:16px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:5px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);">
+          <div style="width:7px;height:7px;border-radius:50%;background:#22c55e;"></div> NORMAL
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);">
+          <div style="width:7px;height:7px;border-radius:50%;background:var(--amber);"></div> WARNING
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);">
+          <div style="width:7px;height:7px;border-radius:50%;background:var(--red);opacity:.5;"></div> OFFLINE
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Password toggle ────────────────────────────────────────────
+  document.getElementById('pw-toggle').addEventListener('click', function () {
+    const inp = document.getElementById('password');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+    this.style.color = inp.type === 'text' ? 'var(--teal)' : '';
+  });
+
+  // ── Form validation & submit ───────────────────────────────────
+  document.getElementById('login-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    let valid = true;
+
+    // Clear previous errors
+    document.querySelectorAll('.error-msg').forEach(el => el.classList.remove('show'));
+    document.querySelectorAll('input').forEach(el => el.classList.remove('error'));
+    document.getElementById('form-err').classList.remove('show');
+
+    if (!username) {
+      document.getElementById('username').classList.add('error');
+      document.getElementById('username-err').classList.add('show');
+      valid = false;
+    }
+    if (!password) {
+      document.getElementById('password').classList.add('error');
+      document.getElementById('password-err').classList.add('show');
+      valid = false;
+    }
+    if (!valid) return;
+
+    // Loading state
+    const btn = document.getElementById('btn-submit');
+    document.getElementById('btn-text').textContent = 'AUTHENTICATING';
+    btn.classList.add('loading');
+
+    try {
+      const res = await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username,
+          password,
+          remember: document.getElementById('remember').checked
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        document.getElementById('btn-text').textContent = 'ACCESS GRANTED ✓';
+        btn.style.borderColor = '#22c55e';
+        btn.style.color = '#22c55e';
+        setTimeout(() => { window.location.href = data.redirect || '/'; }, 800);
+      } else {
+        document.getElementById('form-err-text').textContent =
+          data.message || 'Invalid credentials. Access denied.';
+        document.getElementById('form-err').classList.add('show');
+        document.getElementById('username').classList.add('error');
+        document.getElementById('password').classList.add('error');
+        btn.classList.remove('loading');
+        document.getElementById('btn-text').textContent = 'AUTHENTICATE';
+        // Shake animation
+        const panel = document.querySelector('.login-panel');
+        panel.style.animation = 'shake .35s ease';
+        panel.addEventListener('animationend', () => panel.style.animation = '', { once: true });
+      }
+    } catch (err) {
+      document.getElementById('form-err-text').textContent = 'Network error. Please try again.';
+      document.getElementById('form-err').classList.add('show');
+      btn.classList.remove('loading');
+      document.getElementById('btn-text').textContent = 'AUTHENTICATE';
+    }
+  });
+
+  // Shake keyframe injected via JS
+  const style = document.createElement('style');
+  style.textContent = `@keyframes shake {
+    0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)}
+    40%{transform:translateX(8px)} 60%{transform:translateX(-5px)}
+    80%{transform:translateX(5px)}
+  }`;
+  document.head.appendChild(style);
+</script>
+</body>
+</html>

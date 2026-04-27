@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TANESCO Pole Monitor</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <span class="logo-icon">⚡</span>
+      <div>
+        <h1>TANESCO Pole Monitor</h1>
+        <p>IoT Tilt Monitoring System</p>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:16px;">
+      <div class="live-badge" id="live-badge">● LIVE</div>
+      <span style="font-size:13px;color:var(--muted);">
+        👤 <%= locals.admin ? locals.admin.username : 'admin' %>
+      </span>
+      <a href="/auth/logout" style="font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--border);padding:4px 10px;border-radius:6px;">
+        Logout
+      </a>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- Stat cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <span class="stat-label">Active Poles</span>
+      <span class="stat-value" id="stat-nodes">—</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Total Readings</span>
+      <span class="stat-value" id="stat-total">—</span>
+    </div>
+    <div class="stat-card alert-card">
+      <span class="stat-label">Active Alerts</span>
+      <span class="stat-value" id="stat-alerts">—</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-label">Last Updated</span>
+      <span class="stat-value small" id="stat-time">—</span>
+    </div>
+  </div>
+
+  <!-- Pole status cards -->
+  <section>
+    <h2 class="section-title">Pole Status</h2>
+    <div class="poles-grid" id="poles-grid">
+      <p class="empty-msg">Loading pole data…</p>
+    </div>
+  </section>
+
+  <!-- Alerts table -->
+  <section>
+    <div class="section-header">
+      <h2 class="section-title">Active Alerts</h2>
+      <label class="toggle-label">
+        <input type="checkbox" id="show-resolved"> Show resolved
+      </label>
+    </div>
+    <div class="table-wrap">
+      <table id="alerts-table">
+        <thead>
+          <tr>
+            <th>Time</th><th>Pole</th><th>Tilt (°)</th>
+            <th>Level</th><th>Message</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="alerts-body">
+          <tr><td colspan="6" class="empty-msg">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Recent readings -->
+  <section>
+    <div class="section-header">
+      <h2 class="section-title">Recent Readings</h2>
+      <select id="node-filter">
+        <option value="">All poles</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table id="readings-table">
+        <thead>
+          <tr>
+            <th>Time</th><th>Pole</th><th>Tilt (°)</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="readings-body">
+          <tr><td colspan="4" class="empty-msg">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script src="/js/dashboard.js"></script>
+</body>
+</html>
