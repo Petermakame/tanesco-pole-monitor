@@ -1,8 +1,10 @@
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  connectionString: "postgresql://postgres:123456789@localhost:5432/tanesco",
-  ssl: false
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 async function initDB() {
@@ -32,6 +34,7 @@ async function initDB() {
       CREATE INDEX IF NOT EXISTS idx_readings_time ON pole_readings(created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_alerts_node   ON alerts(node_id);
     `);
+
     console.log('✅ Database tables ready');
   } finally {
     client.release();
